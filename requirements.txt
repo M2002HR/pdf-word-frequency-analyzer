@@ -1,0 +1,4 @@
+pdfplumber
+nltk
+wordcloud
+tqdm
