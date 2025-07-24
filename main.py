@@ -4,15 +4,16 @@ import pdfplumber
 from collections import Counter
 import re
 import nltk
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
+from nltk import pos_tag
 import csv
 from wordcloud import WordCloud
 from tqdm import tqdm
 import argparse
 
 # Ensure required NLTK resources are downloaded
-for resource in ['stopwords', 'wordnet']:
+for resource in ['stopwords', 'wordnet', 'averaged_perceptron_tagger']:
     try:
         nltk.data.find(f'corpora/{resource}')
     except LookupError:
@@ -22,6 +23,24 @@ for resource in ['stopwords', 'wordnet']:
 stop_words = set(stopwords.words('english'))
 lemmatizer = WordNetLemmatizer()
 
+def get_wordnet_pos(tag):
+    """Map NLTK POS tags to WordNet POS tags."""
+    if tag.startswith('J'):
+        return wordnet.ADJ
+    elif tag.startswith('V'):
+        return wordnet.VERB
+    elif tag.startswith('N'):
+        return wordnet.NOUN
+    elif tag.startswith('R'):
+        return wordnet.ADV
+    return wordnet.NOUN
+
+def normalize_word(word, tag=None):
+    """Lemmatize with POS, then apply morphy fallback."""
+    lemma = lemmatizer.lemmatize(word, tag or wordnet.NOUN)
+    morphed = wordnet.morphy(lemma)
+    return morphed if morphed else lemma
+
 def load_known_words(filepath=None):
     known_words = set()
     if filepath and os.path.isfile(filepath):
@@ -29,9 +48,9 @@ def load_known_words(filepath=None):
             for line in f:
                 w = line.strip().lower()
                 if w:
-                    lw = lemmatizer.lemmatize(w)
+                    lw = normalize_word(w)
                     known_words.add(lw)
-        print(f"Loaded and lemmatized {len(known_words)} known words from {filepath}")
+        print(f"Loaded and normalized {len(known_words)} known words from {filepath}")
     else:
         print("No known words file provided or file not found. Using empty known words list.")
     return known_words
@@ -39,19 +58,20 @@ def load_known_words(filepath=None):
 def clean_and_lemmatize(text):
     text = text.replace('-\n', '').replace('\n', ' ')
     words = re.findall(r'\b\w+\b', text.lower())
+    words = [w for w in words if w not in stop_words and not w.isdigit() and len(w) >= 3]
 
-    print("Lemmatizing words...")
-    lemmatized_words = [
-        lemmatizer.lemmatize(word)
-        for word in tqdm(words, desc="Lemmatizing", unit="word", leave=False)
-        if word not in stop_words and not word.isdigit() and len(word) >= 3
-    ]
+    print("Lemmatizing and normalizing words with POS tagging...")
+    lemmatized_words = []
+    tagged = pos_tag(words)
+    for word, tag in tqdm(tagged, desc="Lemmatizing", unit="word", leave=False):
+        wn_tag = get_wordnet_pos(tag)
+        normalized = normalize_word(word, wn_tag)
+        lemmatized_words.append(normalized)
     return lemmatized_words
 
 def process_pdf(pdf_path):
     print(f"\n📄 Processing PDF: {pdf_path}")
     text = ""
-
     try:
         with pdfplumber.open(pdf_path) as pdf:
             print(f"Reading {len(pdf.pages)} pages...")
@@ -119,7 +139,6 @@ def main():
     )
 
     args = parser.parse_args()
-
     pdf_path = args.pdf_path
     top_n = args.num_top_words
     known_words_file = args.known_words_file
@@ -145,9 +164,8 @@ def main():
         pdf_basename = os.path.splitext(os.path.basename(pdf_path))[0]
         output_dir = os.path.join(project_root, "results", pdf_basename)
         os.makedirs(output_dir, exist_ok=True)
-            
-    known_words = load_known_words(known_words_file)
 
+    known_words = load_known_words(known_words_file)
     lemmatized_words = process_pdf(pdf_path)
     if lemmatized_words is None:
         sys.exit(1)
