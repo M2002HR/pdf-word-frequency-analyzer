@@ -62,7 +62,7 @@ python word_frequency_finder.py path/to/your/file.pdf [--top_n 100] [--known_wor
 ### Example
 
 ```bash
-python main.py data\sample.pdf --num_top_words 500 --known_words_file known_words.txt
+python main.py data/sample.pdf --num_top_words 500 --known_words_file data/known_words.txt
 ```
 
 ---
