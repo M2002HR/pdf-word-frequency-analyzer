@@ -171,7 +171,7 @@ def main():
         sys.exit(1)
 
     excluded_words = [w for w in lemmatized_words if w in known_words]
-    unknown_words = [w for w in lemmatized_words if w not in known_words]
+    unknown_words = [w for w in lemmatized_words if w not in known_words and not re.search(r'\d', w)]
 
     excluded_freq = Counter(excluded_words)
     unknown_freq = Counter(unknown_words)
