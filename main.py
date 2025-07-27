@@ -23,6 +23,16 @@ for resource in ['stopwords', 'wordnet', 'averaged_perceptron_tagger']:
 stop_words = set(stopwords.words('english'))
 lemmatizer = WordNetLemmatizer()
 
+# Define Roman numerals to exclude
+ROMAN_NUMERALS = {
+    'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
+    'xi', 'xii', 'xiii', 'xiv', 'xv', 'xvi', 'xvii', 'xviii', 'xix', 'xx',
+    'xxi', 'xxii', 'xxiii', 'xxiv', 'xxv', 'xxvi', 'xxvii', 'xxviii', 'xxix', 'xxx'
+}
+
+def contains_digits_or_roman(word):
+    return re.search(r'\d', word) or word.lower() in ROMAN_NUMERALS
+
 def get_wordnet_pos(tag):
     """Map NLTK POS tags to WordNet POS tags."""
     if tag.startswith('J'):
@@ -171,7 +181,7 @@ def main():
         sys.exit(1)
 
     excluded_words = [w for w in lemmatized_words if w in known_words]
-    unknown_words = [w for w in lemmatized_words if w not in known_words and not re.search(r'\d', w)]
+    unknown_words = [w for w in lemmatized_words if w not in known_words and not contains_digits_or_roman(w)]
 
     excluded_freq = Counter(excluded_words)
     unknown_freq = Counter(unknown_words)
