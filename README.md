@@ -1,87 +1,143 @@
-
 # PDF Word Frequency Analyzer
 
-A Python command-line tool to extract, clean, and analyze word frequencies from PDF files.  
-It lemmatizes words, excludes stopwords and known/common words, and outputs CSV reports and word cloud images to help you identify unknown or important vocabulary in your PDFs.
+**A Python command-line tool for extracting, normalizing, filtering, and visualizing English vocabulary from text-based PDF documents.**
 
----
+The tool is useful for language study and document exploration. It extracts PDF text, applies part-of-speech-aware lemmatization, separates user-known words from unknown vocabulary, and produces CSV reports and word-cloud images.
 
-## Features
+## Engineering highlights
 
-- Extracts text from PDF files using `pdfplumber`.
-- Cleans and lemmatizes text with `NLTK`.
-- Filters out stopwords and user-provided known words.
-- Generates frequency CSVs for:
-  - All words
-  - Known (excluded) words
-  - Unknown words (not in known words)
-- Creates word cloud images from the most frequent words.
-- Command-line interface with flexible flags and options.
+- Page-by-page text extraction with `pdfplumber`
+- NLTK token filtering, POS tagging, WordNet lemmatization, and morphology fallback
+- User-supplied known-word lists
+- Filtering for stopwords, short tokens, digits, and Roman numerals
+- Frequency reports for all, known, and unknown words
+- Word-cloud generation
+- Progress reporting for page extraction and lemmatization
+- Configurable top-N size and output directory
+- Input validation and clear exit behavior
 
+## Technology
 
-## Installation
+`Python` · `pdfplumber` · `NLTK` · `WordNet` · `WordCloud` · `tqdm` · `CSV`
 
-1. Clone the repository:
+## Processing pipeline
 
-   ```bash
-   git clone https://github.com/M2002HR/pdf-word-frequency-analyzer.git
-   cd pdf-word-frequency-analyzer
-    ```
-
-2. Install required dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Download necessary NLTK data (if not already available):
-
-   ```python
-   import nltk
-   nltk.download('stopwords')
-   nltk.download('wordnet')
-   ```
-
----
-
-## Usage
-
-Run the script from the command line with:
-
-```bash
-python word_frequency_finder.py path/to/your/file.pdf [--top_n 100] [--known_words_file known_words.txt] [--output_dir path/to/output]
+```text
+Text-based PDF
+      │
+      ▼
+Page text extraction
+      │
+      ▼
+Token cleanup and filtering
+      │
+      ▼
+POS tagging and lemmatization
+      │
+      ├── known-word matches
+      └── unknown vocabulary
+      │
+      ▼
+CSV frequency reports and word clouds
 ```
 
-### Arguments
-
-* Path to the PDF file to analyze **(required)** 
-* `--top_n` **(optional)**: Number of top frequent words for reports and word clouds (default: 100).
-* `--known_words_file` **(optional)**: Path to a text file containing known/common words to exclude from unknown words.
-* `--output_dir` **(optional)**: Directory to save the results. Defaults to `results/<pdf_filename>/` inside the project directory.
-
-### Example
+## Quick start
 
 ```bash
-python main.py data/sample.pdf --num_top_words 500 --known_words_file data/known_words.txt
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
----
+Analyze a PDF:
 
-## Output
+```bash
+python main.py path/to/document.pdf
+```
 
-The tool will create a results directory with the following files:
+Analyze the top 500 words while excluding a personal vocabulary list:
 
-* `top<N>_unknown_words.csv` — Top N unknown words and their frequencies.
-* `wordcloud_top<N>_unknown_words.png` — Word cloud image of unknown words.
-* `excluded_known_words.csv` — All known/excluded words found in the document.
-* `all_words.csv` — Frequency of all words found.
-* `wordcloud_top<N>_all_words.png` — Word cloud image for all words.
+```bash
+python main.py path/to/document.pdf \
+  --num_top_words 500 \
+  --known_words_file data/known_words.txt
+```
 
----
+Use a custom output directory:
 
-## Acknowledgments
+```bash
+python main.py path/to/document.pdf \
+  --output_dir outputs/document-analysis
+```
 
-* [pdfplumber](https://github.com/jsvine/pdfplumber) for PDF text extraction
-* [NLTK](https://www.nltk.org/) for natural language processing tools
-* [WordCloud](https://github.com/amueller/word_cloud) for word cloud generation
+## CLI reference
 
+```text
+python main.py PDF_PATH [options]
+```
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `PDF_PATH` | Path to a text-based PDF | required |
+| `-n`, `--num_top_words` | Number of high-frequency words used in top-N reports and images | `100` |
+| `-k`, `--known_words_file` | Text file containing one known word per line | empty set |
+| `-o`, `--output_dir` | Output directory | `results/<pdf-name>/` |
+
+## Known-word file
+
+Create a UTF-8 text file with one word per line:
+
+```text
+analysis
+architecture
+configuration
+reliable
+```
+
+Words are normalized before comparison, so common inflected forms may map to the same lemma.
+
+## Outputs
+
+```text
+results/<pdf-name>/
+├── top<N>_unknown_words.csv
+├── wordcloud_top<N>_unknown_words.png
+├── excluded_known_words.csv
+├── all_words.csv
+└── wordcloud_top<N>_all_words.png
+```
+
+### Report meaning
+
+- `top<N>_unknown_words.csv`: most frequent vocabulary not found in the known-word list
+- `excluded_known_words.csv`: known words that appeared in the document
+- `all_words.csv`: complete normalized frequency table
+- word-cloud images: visual summaries of the most frequent terms
+
+## NLTK resources
+
+The script checks for required NLTK resources and downloads missing packages at runtime. Environments without internet access should install these resources in advance:
+
+```python
+import nltk
+
+nltk.download("stopwords")
+nltk.download("wordnet")
+nltk.download("averaged_perceptron_tagger")
+```
+
+## Limitations
+
+- The input must contain extractable text; scanned PDFs require OCR first.
+- The language pipeline is currently configured for English.
+- Complex layouts, tables, formulas, headers, and repeated footers can affect frequency counts.
+- Word clouds are exploratory visualizations, not statistical evaluation.
+- Automatic resource downloads may be unsuitable for locked-down production environments.
+
+## Privacy notes
+
+PDF text is processed locally, but generated CSV files and images can reveal document contents. Store or share output artifacts according to the sensitivity of the source document.
+
+## Project status
+
+This repository is a focused NLP utility demonstrating PDF extraction, linguistic normalization, command-line design, structured reporting, validation, and visual output generation.
